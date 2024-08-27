@@ -17,6 +17,7 @@ from ultralytics.utils import LOGGER, TryExcept, ops, plt_settings, threaded
 from ultralytics.utils.checks import check_font, check_version, is_ascii
 from ultralytics.utils.files import increment_path
 
+from ultralytics.utils.plot_cfg import plot_label, plot_box, plot_mask
 
 class Colors:
     """
@@ -223,16 +224,17 @@ class Annotator:
         text_x = x_center - text_size[0] // 2
         text_y = y_center + text_size[1] // 2
         # Draw the text
-        cv2.putText(
-            self.im,
-            str(label),
-            (text_x, text_y),
-            cv2.FONT_HERSHEY_SIMPLEX,
-            self.sf - 0.15,
-            self.get_txt_color(color, txt_color),
-            self.tf,
-            lineType=cv2.LINE_AA,
-        )
+        if plot_label:
+            cv2.putText(
+                self.im,
+                str(label),
+                (text_x, text_y),
+                cv2.FONT_HERSHEY_SIMPLEX,
+                self.sf - 0.15,
+                self.get_txt_color(color, txt_color),
+                self.tf,
+                lineType=cv2.LINE_AA,
+            )
 
     def text_label(self, box, label="", color=(128, 128, 128), txt_color=(255, 255, 255), margin=5):
         """
@@ -260,16 +262,17 @@ class Annotator:
         # Draw the background rectangle
         cv2.rectangle(self.im, (rect_x1, rect_y1), (rect_x2, rect_y2), color, -1)
         # Draw the text on top of the rectangle
-        cv2.putText(
-            self.im,
-            label,
-            (text_x, text_y),
-            cv2.FONT_HERSHEY_SIMPLEX,
-            self.sf - 0.1,
-            self.get_txt_color(color, txt_color),
-            self.tf,
-            lineType=cv2.LINE_AA,
-        )
+        if plot_label:
+            cv2.putText(
+                self.im,
+                label,
+                (text_x, text_y),
+                cv2.FONT_HERSHEY_SIMPLEX,
+                self.sf - 0.1,
+                self.get_txt_color(color, txt_color),
+                self.tf,
+                lineType=cv2.LINE_AA,
+            )
 
     def box_label(self, box, label="", color=(128, 128, 128), txt_color=(255, 255, 255), rotated=False):
         """
@@ -317,17 +320,18 @@ class Annotator:
                 if p1[0] > self.im.shape[1] - w:  # shape is (h, w), check if label extend beyond right side of image
                     p1 = self.im.shape[1] - w, p1[1]
                 p2 = p1[0] + w, p1[1] - h if outside else p1[1] + h
-                cv2.rectangle(self.im, p1, p2, color, -1, cv2.LINE_AA)  # filled
-                cv2.putText(
-                    self.im,
-                    label,
-                    (p1[0], p1[1] - 2 if outside else p1[1] + h - 1),
-                    0,
-                    self.sf,
-                    txt_color,
-                    thickness=self.tf,
-                    lineType=cv2.LINE_AA,
-                )
+                if plot_label:
+                    cv2.rectangle(self.im, p1, p2, color, -1, cv2.LINE_AA)  # filled
+                    cv2.putText(
+                        self.im,
+                        label,
+                        (p1[0], p1[1] - 2 if outside else p1[1] + h - 1),
+                        0,
+                        self.sf,
+                        txt_color,
+                        thickness=self.tf,
+                        lineType=cv2.LINE_AA,
+                    )
 
     def masks(self, masks, colors, im_gpu, alpha=0.5, retina_masks=False):
         """
@@ -456,7 +460,8 @@ class Annotator:
                 cv2.rectangle(self.im, xy, p2, txt_color, -1, cv2.LINE_AA)  # filled
                 # Using `txt_color` for background and draw fg with white color
                 txt_color = (255, 255, 255)
-            cv2.putText(self.im, text, xy, 0, self.sf, txt_color, thickness=self.tf, lineType=cv2.LINE_AA)
+            if plot_label:
+                cv2.putText(self.im, text, xy, 0, self.sf, txt_color, thickness=self.tf, lineType=cv2.LINE_AA)
 
     def fromarray(self, im):
         """Update self.im from a numpy array."""
@@ -533,26 +538,27 @@ class Annotator:
         text_width = text_size[0]
         text_height = text_size[1]
 
-        rect_width = text_width + 20
-        rect_height = text_height + 20
-        rect_top_left = (center_x - rect_width // 2, center_y - rect_height // 2)
-        rect_bottom_right = (center_x + rect_width // 2, center_y + rect_height // 2)
-        cv2.rectangle(self.im, rect_top_left, rect_bottom_right, region_color, -1)
+        if plot_label:
+            rect_width = text_width + 20
+            rect_height = text_height + 20
+            rect_top_left = (center_x - rect_width // 2, center_y - rect_height // 2)
+            rect_bottom_right = (center_x + rect_width // 2, center_y + rect_height // 2)
+            cv2.rectangle(self.im, rect_top_left, rect_bottom_right, region_color, -1)
 
-        text_x = center_x - text_width // 2
-        text_y = center_y + text_height // 2
+            text_x = center_x - text_width // 2
+            text_y = center_y + text_height // 2
 
-        # Draw text
-        cv2.putText(
-            self.im,
-            label,
-            (text_x, text_y),
-            0,
-            fontScale=self.sf,
-            color=txt_color,
-            thickness=self.tf,
-            lineType=cv2.LINE_AA,
-        )
+            # Draw text
+            cv2.putText(
+                self.im,
+                label,
+                (text_x, text_y),
+                0,
+                fontScale=self.sf,
+                color=txt_color,
+                thickness=self.tf,
+                lineType=cv2.LINE_AA,
+            )
 
     def display_objects_labels(self, im0, text, txt_color, bg_color, x_center, y_center, margin):
         """
@@ -571,12 +577,13 @@ class Annotator:
         text_x = x_center - text_size[0] // 2
         text_y = y_center + text_size[1] // 2
 
-        rect_x1 = text_x - margin
-        rect_y1 = text_y - text_size[1] - margin
-        rect_x2 = text_x + text_size[0] + margin
-        rect_y2 = text_y + margin
-        cv2.rectangle(im0, (rect_x1, rect_y1), (rect_x2, rect_y2), bg_color, -1)
-        cv2.putText(im0, text, (text_x, text_y), 0, self.sf, txt_color, self.tf, lineType=cv2.LINE_AA)
+        if plot_label:
+            rect_x1 = text_x - margin
+            rect_y1 = text_y - text_size[1] - margin
+            rect_x2 = text_x + text_size[0] + margin
+            rect_y2 = text_y + margin
+            cv2.rectangle(im0, (rect_x1, rect_y1), (rect_x2, rect_y2), bg_color, -1)
+            cv2.putText(im0, text, (text_x, text_y), 0, self.sf, txt_color, self.tf, lineType=cv2.LINE_AA)
 
     def display_analytics(self, im0, text, txt_color, bg_color, margin):
         """
@@ -597,15 +604,16 @@ class Annotator:
             text_size = cv2.getTextSize(txt, 0, self.sf, self.tf)[0]
             if text_size[0] < 5 or text_size[1] < 5:
                 text_size = (5, 5)
-            text_x = im0.shape[1] - text_size[0] - margin * 2 - horizontal_gap
-            text_y = text_y_offset + text_size[1] + margin * 2 + vertical_gap
-            rect_x1 = text_x - margin * 2
-            rect_y1 = text_y - text_size[1] - margin * 2
-            rect_x2 = text_x + text_size[0] + margin * 2
-            rect_y2 = text_y + margin * 2
-            cv2.rectangle(im0, (rect_x1, rect_y1), (rect_x2, rect_y2), bg_color, -1)
-            cv2.putText(im0, txt, (text_x, text_y), 0, self.sf, txt_color, self.tf, lineType=cv2.LINE_AA)
-            text_y_offset = rect_y2
+            if plot_label:
+                text_x = im0.shape[1] - text_size[0] - margin * 2 - horizontal_gap
+                text_y = text_y_offset + text_size[1] + margin * 2 + vertical_gap
+                rect_x1 = text_x - margin * 2
+                rect_y1 = text_y - text_size[1] - margin * 2
+                rect_x2 = text_x + text_size[0] + margin * 2
+                rect_y2 = text_y + margin * 2
+                cv2.rectangle(im0, (rect_x1, rect_y1), (rect_x2, rect_y2), bg_color, -1)
+                cv2.putText(im0, txt, (text_x, text_y), 0, self.sf, txt_color, self.tf, lineType=cv2.LINE_AA)
+                text_y_offset = rect_y2
 
     @staticmethod
     def estimate_pose_angle(a, b, c):
@@ -679,17 +687,18 @@ class Annotator:
         angle_text_position = (int(center_kpt[0]), int(center_kpt[1]))
         angle_background_position = (angle_text_position[0], angle_text_position[1] - angle_text_height - 5)
         angle_background_size = (angle_text_width + 2 * 5, angle_text_height + 2 * 5 + (self.tf * 2))
-        cv2.rectangle(
-            self.im,
-            angle_background_position,
-            (
-                angle_background_position[0] + angle_background_size[0],
-                angle_background_position[1] + angle_background_size[1],
-            ),
-            color,
-            -1,
-        )
-        cv2.putText(self.im, angle_text, angle_text_position, 0, self.sf, txt_color, self.tf)
+        if plot_label:
+            cv2.rectangle(
+                self.im,
+                angle_background_position,
+                (
+                    angle_background_position[0] + angle_background_size[0],
+                    angle_background_position[1] + angle_background_size[1],
+                ),
+                color,
+                -1,
+            )
+            cv2.putText(self.im, angle_text, angle_text_position, 0, self.sf, txt_color, self.tf)
 
         # Draw Counts
         (count_text_width, count_text_height), _ = cv2.getTextSize(count_text, 0, self.sf, self.tf)
@@ -700,17 +709,19 @@ class Annotator:
         )
         count_background_size = (count_text_width + 10, count_text_height + 10 + self.tf)
 
-        cv2.rectangle(
-            self.im,
-            count_background_position,
-            (
-                count_background_position[0] + count_background_size[0],
-                count_background_position[1] + count_background_size[1],
-            ),
-            color,
-            -1,
-        )
-        cv2.putText(self.im, count_text, count_text_position, 0, self.sf, txt_color, self.tf)
+        if plot_label:
+            cv2.rectangle(
+                self.im,
+                count_background_position,
+                (
+                    count_background_position[0] + count_background_size[0],
+                    count_background_position[1] + count_background_size[1],
+                ),
+                color,
+                -1,
+            )
+            cv2.putText(self.im, count_text, count_text_position, 0, self.sf, txt_color, self.tf)
+
 
         # Draw Stage
         (stage_text_width, stage_text_height), _ = cv2.getTextSize(stage_text, 0, self.sf, self.tf)
@@ -718,17 +729,19 @@ class Annotator:
         stage_background_position = (stage_text_position[0], stage_text_position[1] - stage_text_height - 5)
         stage_background_size = (stage_text_width + 10, stage_text_height + 10)
 
-        cv2.rectangle(
-            self.im,
-            stage_background_position,
-            (
-                stage_background_position[0] + stage_background_size[0],
-                stage_background_position[1] + stage_background_size[1],
-            ),
-            color,
-            -1,
-        )
-        cv2.putText(self.im, stage_text, stage_text_position, 0, self.sf, txt_color, self.tf)
+        if plot_label:
+            cv2.rectangle(
+                self.im,
+                stage_background_position,
+                (
+                    stage_background_position[0] + stage_background_size[0],
+                    stage_background_position[1] + stage_background_size[1],
+                ),
+                color,
+                -1,
+            )
+            cv2.putText(self.im, stage_text, stage_text_position, 0, self.sf, txt_color, self.tf)
+
 
     def seg_bbox(self, mask, mask_color=(255, 0, 255), label=None, txt_color=(255, 255, 255)):
         """
@@ -751,10 +764,12 @@ class Annotator:
             -1,
         )
 
-        if label:
-            cv2.putText(
-                self.im, label, (int(mask[0][0]) - text_size[0] // 2, int(mask[0][1])), 0, self.sf, txt_color, self.tf
-            )
+        if plot_label:
+            if label:
+                cv2.putText(
+                    self.im, label, (int(mask[0][0]) - text_size[0] // 2, int(mask[0][1])), 0, self.sf, txt_color,
+                    self.tf
+                )
 
     def plot_distance_and_line(self, distance_m, distance_mm, centroids, line_color, centroid_color):
         """
@@ -767,31 +782,33 @@ class Annotator:
             line_color (RGB): Distance line color.
             centroid_color (RGB): Bounding box centroid color.
         """
-        (text_width_m, text_height_m), _ = cv2.getTextSize(f"Distance M: {distance_m:.2f}m", 0, self.sf, self.tf)
-        cv2.rectangle(self.im, (15, 25), (15 + text_width_m + 10, 25 + text_height_m + 20), line_color, -1)
-        cv2.putText(
-            self.im,
-            f"Distance M: {distance_m:.2f}m",
-            (20, 50),
-            0,
-            self.sf,
-            centroid_color,
-            self.tf,
-            cv2.LINE_AA,
-        )
+        if plot_label:
+            (text_width_m, text_height_m), _ = cv2.getTextSize(f"Distance M: {distance_m:.2f}m", 0, self.sf, self.tf)
+            cv2.rectangle(self.im, (15, 25), (15 + text_width_m + 10, 25 + text_height_m + 20), line_color, -1)
+            cv2.putText(
+                self.im,
+                f"Distance M: {distance_m:.2f}m",
+                (20, 50),
+                0,
+                self.sf,
+                centroid_color,
+                self.tf,
+                cv2.LINE_AA,
+            )
 
-        (text_width_mm, text_height_mm), _ = cv2.getTextSize(f"Distance MM: {distance_mm:.2f}mm", 0, self.sf, self.tf)
-        cv2.rectangle(self.im, (15, 75), (15 + text_width_mm + 10, 75 + text_height_mm + 20), line_color, -1)
-        cv2.putText(
-            self.im,
-            f"Distance MM: {distance_mm:.2f}mm",
-            (20, 100),
-            0,
-            self.sf,
-            centroid_color,
-            self.tf,
-            cv2.LINE_AA,
-        )
+            (text_width_mm, text_height_mm), _ = cv2.getTextSize(f"Distance MM: {distance_mm:.2f}mm", 0, self.sf,
+                                                                 self.tf)
+            cv2.rectangle(self.im, (15, 75), (15 + text_width_mm + 10, 75 + text_height_mm + 20), line_color, -1)
+            cv2.putText(
+                self.im,
+                f"Distance MM: {distance_mm:.2f}mm",
+                (20, 100),
+                0,
+                self.sf,
+                centroid_color,
+                self.tf,
+                cv2.LINE_AA,
+            )
 
         cv2.line(self.im, centroids[0], centroids[1], line_color, 3)
         cv2.circle(self.im, centroids[0], 6, centroid_color, -1)

@@ -1,6 +1,6 @@
 import yaml
 
-plot_label = True
+plot_label = False
 plot_box = True
 plot_mask = True
 
