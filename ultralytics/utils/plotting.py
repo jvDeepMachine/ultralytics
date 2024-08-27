@@ -17,6 +17,9 @@ from ultralytics.utils import LOGGER, TryExcept, ops, plt_settings, threaded
 from ultralytics.utils.checks import check_font, check_version, is_ascii
 from ultralytics.utils.files import increment_path
 
+from .checks import check_font, check_version, is_ascii
+from .files import increment_path
+import ultralytics.utils.plot_cfg as plot_cfg
 
 class Colors:
     """
@@ -304,30 +307,22 @@ class Annotator:
                 # self.draw.text((box[0], box[1]), label, fill=txt_color, font=self.font, anchor='ls')  # for PIL>8.0
                 self.draw.text((p1[0], p1[1] - h if outside else p1[1]), label, fill=txt_color, font=self.font)
         else:  # cv2
-            if rotated:
-                p1 = [int(b) for b in box[0]]
-                cv2.polylines(self.im, [np.asarray(box, dtype=int)], True, color, self.lw)  # cv2 requires nparray box
-            else:
-                p1, p2 = (int(box[0]), int(box[1])), (int(box[2]), int(box[3]))
-                cv2.rectangle(self.im, p1, p2, color, thickness=self.lw, lineType=cv2.LINE_AA)
+            p1, p2 = (int(box[0]), int(box[1])), (int(box[2]), int(box[3]))
+            if plot_cfg.box_cfg():
+                cv2.rectangle(self.im, p1, p2, color, thickness=self.lw, lineType=cv2.LINE_AA)  # box
             if label:
                 w, h = cv2.getTextSize(label, 0, fontScale=self.sf, thickness=self.tf)[0]  # text width, height
-                h += 3  # add pixels to pad text
-                outside = p1[1] >= h  # label fits outside box
-                if p1[0] > self.im.shape[1] - w:  # shape is (h, w), check if label extend beyond right side of image
-                    p1 = self.im.shape[1] - w, p1[1]
-                p2 = p1[0] + w, p1[1] - h if outside else p1[1] + h
-                cv2.rectangle(self.im, p1, p2, color, -1, cv2.LINE_AA)  # filled
-                cv2.putText(
-                    self.im,
-                    label,
-                    (p1[0], p1[1] - 2 if outside else p1[1] + h - 1),
-                    0,
-                    self.sf,
-                    txt_color,
-                    thickness=self.tf,
-                    lineType=cv2.LINE_AA,
-                )
+                outside = p1[1] - h >= 3
+                p2 = p1[0] + w, p1[1] - h - 3 if outside else p1[1] + h + 3
+                if plot_cfg.label_cfg():
+                    cv2.rectangle(self.im, p1, p2, color, -1, cv2.LINE_AA)  # filled
+                    cv2.putText(self.im,
+                                label, (p1[0], p1[1] - 2 if outside else p1[1] + h + 2),
+                                0,
+                                self.sf,
+                                txt_color,
+                                thickness=self.tf,
+                                lineType=cv2.LINE_AA)
 
     def masks(self, masks, colors, im_gpu, alpha=0.5, retina_masks=False):
         """
@@ -456,7 +451,7 @@ class Annotator:
                 cv2.rectangle(self.im, xy, p2, txt_color, -1, cv2.LINE_AA)  # filled
                 # Using `txt_color` for background and draw fg with white color
                 txt_color = (255, 255, 255)
-            cv2.putText(self.im, text, xy, 0, self.sf, txt_color, thickness=self.tf, lineType=cv2.LINE_AA)
+            # cv2.putText(self.im, text, xy, 0, self.sf, txt_color, thickness=self.tf, lineType=cv2.LINE_AA)
 
     def fromarray(self, im):
         """Update self.im from a numpy array."""
